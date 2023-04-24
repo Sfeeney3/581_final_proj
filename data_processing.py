@@ -1,12 +1,9 @@
 import pandas as pd
-from sklearn import preprocessing
-import math
-import scipy.stats as stats
 
-soxl = pd.read_csv('./csv/soxl.csv',header=0, names = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume'])
+def dataread(etf):
+    data = pd.read_csv('./csv/'+etf+'.csv',header=0, names = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume'])
 
-
-close = soxl["Close"]   # Select the column using column name and assign it to a new object
+    return data
 
 
 
@@ -32,24 +29,42 @@ def returns(close):
     return dataFrameSum
 
 
-dataFrameSum = returns(close)
 
-n = len(soxl) - len(dataFrameSum)
 
-soxl.drop(soxl.tail(n).index,inplace=True)
+
+if __name__ == "__main__":  
+    #data processing
+   print("Stage: Get etfs")
+   with open("./config/etfname.txt", "r") as etflist: 
+      # reading the file
+      data = etflist.read()
+      # replacing end splitting the text when newline ('\n') is seen.
+      etfs = data.split("\n")
+
+   corrDf = pd.DataFrame(columns=["bndx","gld","ijh","ijr","soxx","spy","vea","vwo"])   
+   print("Stage: augment etf data for daily return")
+   for etf in etfs:
+      print(etf)
+      dataEtf = dataread(etf)
+      close = dataEtf["Close"]
+      dataFrameSum = returns(close)
+      
+      corrDf[etf]=dataFrameSum.loc[:,"daily_return_normalized"]
+      
+      n = len(dataEtf) - len(dataFrameSum)
+
+      dataEtf.drop(dataEtf.tail(n).index,inplace=True)
   
 
 
-soxl = soxl.join(dataFrameSum[['daily_return_normalized']].set_axis(soxl.index))
+      dataEtf = dataEtf.join(dataFrameSum[['daily_return_normalized']].set_axis(dataEtf.index))
 
-soxl.to_csv("./csv/soxl_aug.csv")
-
-
-
-
-
-
-
-
-
-
+      dataEtf.to_csv("./csv/"+etf+"_augmented.csv")
+    
+    # To find the correlation among
+    # the columns using pearson method
+   corrDf = corrDf.corr(method ='pearson')
+   corrDf.to_csv("./csv/corrDf.csv") 
+    
+    
+      
